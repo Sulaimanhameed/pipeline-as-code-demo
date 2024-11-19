@@ -1,14 +1,18 @@
-
 pipeline {
-
     agent {
-        node {
-            label 'kubuagent'
+        kubernetes {
+            yaml '''
+                apiVersion: v1
+                kind: Pod
+                spec:
+                  containers:
+                  - name: maven
+                    image: maven:3.8.4-openjdk-17
+                    command:
+                    - cat
+                    tty: true
+            '''
         }
-    }
-
-    tools { 
-        maven 'maven3' 
     }
 
     options {
@@ -38,7 +42,7 @@ pipeline {
             steps {
                 checkout([
                     $class: 'GitSCM', 
-                    branches: [[name: '*/master']], 
+                    branches: [[name: '*/main']], 
                     userRemoteConfigs: [[url: 'https://github.com/spring-projects/spring-petclinic.git']]
                 ])
             }
@@ -46,35 +50,17 @@ pipeline {
 
         stage('Code Build') {
             steps {
+                container('maven') {
                  sh 'mvn install -Dmaven.test.skip=true'
+                }
             }
         }
 
-        stage('Environment Analysis') {
-
-            parallel {
-
-                stage('Priting All Global Variables') {
-                    steps {
-                        sh """
-                        env
-                        """
-                    }
-                }
-
-                stage('Execute Shell') {
-                    steps {
-                        sh 'echo "Hello"'
-                    }
-                }
-
-                stage('Print ENV variable') {
-                    steps {
-                        sh "echo ${APP_ENV}"
-                    }
-                }
-
-            
+        stage('Printing All Global Variables') {
+            steps {
+                sh """
+                env
+                """
             }
         }
 
